@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    ports:
+      - '6500:5432'
+    env_file:
+      - ./.env
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+  cache:
+    image: redis:7
+    restart: always
+    ports:
+      - '6379:6379'
+    command: 'redis-server --requirepass ${REDIS_PASSWORD}'
+    volumes:
+      - cache:/data
+    env_file:
+      - ./.env
+  web:
+    build: .
+    restart: always
+    command: bash -c 'alembic revision --autogenerate -m "creat tables";
+                      alembic upgrade head;
+                      uvicorn app.main:app --reload --host 0.0.0.0'
+    volumes:
+      - .:/app
+    ports:
+      - '5000:8000'
+    depends_on:
+      - db
+      - cache
+
+volumes:
+  postgres-db:
+  cache:
+    driver: local
